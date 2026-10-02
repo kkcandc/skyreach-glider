@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SKYREACH — Halcyon Reach</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%2310283a' width='32' height='32'/%3E%3Cpath fill='%23e39b3c' d='M4 20 L16 8 L28 20 L16 16 Z'/%3E%3C/svg%3E" />
+    <meta
+      name="description"
+      content="Walk the roofs of Halcyon Reach, then hang-glide the thermals over an original waterfront city."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,640&family=Outfit:wght@340;520;640&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="boot">Charting Halcyon Reach…</div>
+
+    <section id="title" class="screen">
+      <div class="brand">
+        <p class="eyebrow">An original waterfront</p>
+        <h1>SKYREACH</h1>
+        <p class="tag">Walk the roofs of Halcyon Reach. Leap. Ride the thermals home.</p>
+      </div>
+      <div class="actions">
+        <button id="start-walk" type="button">Start on the promenade</button>
+        <button id="start-crown" class="ghost" type="button">Leap from the Crown</button>
+      </div>
+      <ul class="hints">
+        <li><kbd>WASD</kbd> move</li>
+        <li><kbd>Shift</kbd> sprint</li>
+        <li><kbd>Space</kbd> jump</li>
+        <li><kbd>G</kbd> wing</li>
+        <li><kbd>Mouse</kbd> look / steer</li>
+        <li><kbd>C</kbd> atlas</li>
+        <li><kbd>N</kbd> time of day</li>
+      </ul>
+    </section>
+
+    <div id="hud" hidden>
+      <div id="place"></div>
+      <div id="rose" aria-hidden="true"><div id="compass"><b>N</b><i>E</i><b>S</b><i>W</i></div></div>
+      <div id="meters"></div>
+      <canvas id="map" width="180" height="180"></canvas>
+      <div id="count"></div>
+      <div id="trial"></div>
+      <div id="prompt"></div>
+      <p id="help">Esc pauses · M map · R clears a ring run</p>
+    </div>
+
+    <div id="toast"></div>
+
+    <section id="codex" hidden>
+      <div id="codex-body"></div>
+    </section>
+
+    <section id="pause" class="screen" hidden>
+      <div class="panel">
+        <p class="eyebrow">Paused</p>
+        <h2>The Reach waits</h2>
+        <ul id="stats"></ul>
+        <label>Hour <input id="time-slider" type="range" min="0" max="1" step="0.01" value="0.73" /></label>
+        <label>Mouse <input id="sens-slider" type="range" min="0.0008" max="0.0045" step="0.0001" value="0.00215" /></label>
+        <label class="check"><input id="invert" type="checkbox" /> Invert pitch</label>
+        <label class="check"><input id="auto-cycle" type="checkbox" /> Drift through the day</label>
+        <div class="actions">
+          <button id="resume" type="button">Resume</button>
+          <button id="reset" class="ghost" type="button">Reset atlas</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="touch">
+      <button id="t-jump" type="button">Jump</button>
+      <button id="t-glide" type="button">Wing</button>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
