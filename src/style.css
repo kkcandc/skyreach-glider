@@ -23,6 +23,15 @@ button { cursor: pointer; }
   background: #10283a;
 }
 
+#streaks {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
 #boot, .screen {
   position: fixed;
   inset: 0;
@@ -174,10 +183,55 @@ kbd {
 #compass b:nth-child(3) { bottom: 0; left: 50%; transform: translateX(-50%); }
 #compass i:nth-child(4) { left: 0; top: 50%; transform: translateY(-50%); }
 
-#meters {
+#readout {
   position: absolute;
   top: 22px;
   right: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#vario {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 64px;
+}
+#vario-track {
+  position: relative;
+  width: 8px;
+  height: 64px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, rgba(182, 240, 194, 0.35), rgba(10, 18, 24, 0.4) 50%, rgba(255, 180, 162, 0.32));
+  border: 1px solid var(--line);
+}
+#vario-needle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #f6efe2;
+  bottom: 50%;
+  transform: translateY(50%);
+  box-shadow: 0 0 6px rgba(246, 239, 226, 0.7);
+}
+#vario-tag {
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+}
+#vario.hot #vario-tag {
+  opacity: 1;
+  max-width: 48px;
+  color: #b6f0c2;
+  text-shadow: 0 0 10px rgba(182, 240, 194, 0.75);
+}
+#meters {
   display: flex;
   gap: 14px;
   align-items: baseline;
@@ -187,6 +241,7 @@ kbd {
 #meters span { margin-left: 4px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
 #meters .up { color: #b6f0c2; }
 #meters .down { color: #ffb4a2; }
+#meters.lift b.up { text-shadow: 0 0 14px rgba(182, 240, 194, 0.9); }
 
 #map {
   position: absolute;

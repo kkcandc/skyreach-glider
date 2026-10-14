@@ -2,6 +2,7 @@ import { WORLD, isWater, terrainHeight } from './terrain';
 import type { Activities } from './content';
 import { THERMALS, formatTime } from './content';
 import type { SaveData } from './save';
+import { clamp } from './util';
 
 export class Hud {
   private map: HTMLCanvasElement;
@@ -100,6 +101,7 @@ export class Hud {
     speed: number;
     vy: number;
     gliding: boolean;
+    lift: boolean;
     motes: number;
     moteTotal: number;
     marks: number;
@@ -114,12 +116,22 @@ export class Hud {
     const meters = document.getElementById('meters');
     if (meters) {
       const kmh = state.speed * 3.6;
+      meters.classList.toggle('lift', state.gliding && state.lift);
       if (state.gliding) {
         const climb = state.vy;
         meters.innerHTML = `<b>${kmh.toFixed(0)}</b><span>km/h</span><b>${state.y.toFixed(0)}</b><span>m</span><b class="${climb >= 0 ? 'up' : 'down'}">${climb >= 0 ? '+' : ''}${climb.toFixed(1)}</b><span>m/s</span>`;
       } else {
         meters.innerHTML = `<b>${kmh.toFixed(0)}</b><span>km/h</span><b>${state.y.toFixed(0)}</b><span>m</span>`;
       }
+    }
+    const vario = document.getElementById('vario');
+    const needle = document.getElementById('vario-needle');
+    if (vario && needle) {
+      vario.hidden = !state.gliding;
+      const t = clamp(state.vy / 8, -1, 1);
+      needle.style.bottom = `${50 + t * 46}%`;
+      needle.style.background = t >= 0.05 ? '#b6f0c2' : t < -0.05 ? '#ffb4a2' : '#f6efe2';
+      vario.classList.toggle('hot', state.gliding && state.lift);
     }
     const count = document.getElementById('count');
     if (count) {

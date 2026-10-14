@@ -1,7 +1,5 @@
 import {
   CircleGeometry,
-  CylinderGeometry,
-  DoubleSide,
   Mesh,
   MeshBasicMaterial,
   PCFSoftShadowMap,
@@ -19,11 +17,13 @@ import { Atmosphere } from './atmosphere';
 import { AudioBus } from './audio';
 import { Avatar } from './avatar';
 import { buildCity } from './city';
-import { Activities, THERMALS, breeze, formatTime, updraftAt } from './content';
+import { Activities, breeze, formatTime, updraftAt } from './content';
 import { Hud } from './hud';
 import { Input } from './input';
 import { Player } from './player';
 import { emptySave, loadSave, writeSave, type SaveData } from './save';
+import { SpeedLines } from './speedlines';
+import { ThermalView } from './thermalView';
 import { placeName, promenadePoint, terrainHeight } from './terrain';
 import { clamp, damp, lerp } from './util';
 
@@ -59,7 +59,12 @@ export class Game {
   private camReady = false;
   private seenGlide = false;
   private focus = new Vector3();
-  private thermalColumns: Mesh[] = [];
+  private thermals = new ThermalView();
+  private speedLines = new SpeedLines();
+  private inLift = false;
+  private liftCool = 0;
+  private liftName: string | null = null;
+  private liftRise = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -88,7 +93,7 @@ export class Game {
     );
     this.scene.add(this.activities.group);
     this.scene.add(this.avatar.group);
-    this.addThermals();
+    this.scene.add(this.thermals.group);
     this.blob = new Mesh(
       new CircleGeometry(0.85, 18),
       new MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }),
@@ -115,23 +120,6 @@ export class Game {
     window.addEventListener('resize', () => this.resize());
     this.expose();
     requestAnimationFrame((t) => this.frame(t));
-  }
-
-  private addThermals() {
-    const mat = new MeshBasicMaterial({
-      color: 0xffb56a,
-      transparent: true,
-      opacity: 0.075,
-      side: DoubleSide,
-      depthWrite: false,
-    });
-    for (const t of THERMALS) {
-      const mesh = new Mesh(new CylinderGeometry(1, 1.15, 1, 14, 1, true), mat);
-      mesh.scale.set(t.r * 0.92, t.top, t.r * 0.92);
-      mesh.position.set(t.x, t.top / 2, t.z);
-      this.scene.add(mesh);
-      this.thermalColumns.push(mesh);
-    }
   }
 
   start(where: 'harbor' | 'crown') {
@@ -295,6 +283,15 @@ export class Game {
     }
     if (event === 'need-air') this.hud.toast('Sprint off a roof, or climb. The wing wants a drop.');
 
+    const catching = this.player.gliding && draft.up > 2.4 && this.player.vel.y > 0.85;
+    if (catching && !this.inLift && this.liftCool <= 0) {
+      this.audio.lift();
+      this.liftCool = 4.2;
+    }
+    this.inLift = catching;
+    this.liftName = catching ? draft.name : null;
+    this.liftCool = Math.max(0, this.liftCool - dt);
+
     const events = this.activities.update(dt, this.player, this.elapsed);
     for (const ev of events) {
       if (ev.type === 'mote') {
@@ -329,6 +326,7 @@ export class Game {
       speed: this.player.gliding ? this.player.airSpeed : this.player.vel.length(),
       vy: this.player.vel.y,
       gliding: this.player.gliding,
+      lift: this.inLift,
       motes: this.activities.moteFound,
       moteTotal: this.activities.moteTotal,
       marks: this.activities.markFound,
@@ -373,24 +371,37 @@ export class Game {
   }
 
   private updateCamera(dt: number, yaw: number, pitch: number) {
+    const gliding = this.player.gliding;
+    const air = gliding ? this.player.airSpeed : this.player.vel.length();
+    const fast = gliding ? clamp((air - 14) / 20, 0, 1) : 0;
+    const dive = gliding ? clamp(-this.player.vel.y / 8, 0, 1) : 0;
     const lookX = Math.sin(yaw);
     const lookZ = -Math.cos(yaw);
-    const dist = this.player.gliding ? 9.4 : 5.7;
+    const dist = gliding ? lerp(8.6, 11.6, fast) : 5.7;
     const elev = pitch;
+    const climb = gliding ? clamp(this.player.vel.y / 7, 0, 1) : 0;
+    const riseTarget = this.inLift ? 0.45 + climb * 1.35 : 0;
+    this.liftRise = damp(this.liftRise, riseTarget, 1.8, dt);
     const target = this.player.pos.clone();
-    target.y += this.player.gliding ? 1.05 : 1.5;
-    const bob = this.player.grounded && !this.player.gliding ? Math.sin(this.player.walkPhase * 2) * 0.04 : 0;
+    if (gliding && fast > 0) {
+      const spd = Math.max(air, 1);
+      target.x += (this.player.vel.x / spd) * fast * 2.4;
+      target.z += (this.player.vel.z / spd) * fast * 2.4;
+    }
+    target.y += (gliding ? 1.05 : 1.5) + this.liftRise;
+    const bob = this.player.grounded && !gliding ? Math.sin(this.player.walkPhase * 2) * 0.04 : 0;
     const desired = new Vector3(
       target.x - lookX * Math.cos(elev) * dist,
-      target.y + Math.sin(elev) * dist * 0.92 + (this.player.gliding ? 1.1 : 0.35) + bob,
+      target.y + Math.sin(elev) * dist * 0.92 + (gliding ? 1.1 : 0.35) + bob - this.liftRise * 0.35,
       target.z - lookZ * Math.cos(elev) * dist,
     );
     const cleared = this.clearCamera(target, desired);
+    const follow = gliding ? lerp(8.6, 3.3, Math.max(fast, dive * 0.85)) : 7;
     if (!this.camReady) {
       this.camPos.copy(cleared);
       this.camReady = true;
     } else {
-      this.camPos.lerp(cleared, 1 - Math.exp(-7 * dt));
+      this.camPos.lerp(cleared, 1 - Math.exp(-follow * dt));
     }
     if (this.shake > 0) {
       this.camPos.x += (Math.random() - 0.5) * this.shake;
@@ -399,11 +410,11 @@ export class Game {
     }
     this.camera.position.copy(this.camPos);
     this.camera.lookAt(target);
-    if (this.player.gliding) this.camera.rotateZ(-this.player.bank * 0.4);
-    const speed = this.player.vel.length();
-    const fov = this.player.gliding ? 70 + clamp((speed - 16) / 24, 0, 1) * 14 : 66;
-    if (Math.abs(this.camera.fov - fov) > 0.02) {
-      this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 3);
+    if (gliding) this.camera.rotateZ(-this.player.bank * 0.4);
+    const fov = gliding ? 66 + fast * 16 + dive * 10 : 66;
+    const next = damp(this.camera.fov, fov, gliding ? 4.2 : 6, dt);
+    if (Math.abs(this.camera.fov - next) > 0.02) {
+      this.camera.fov = next;
       this.camera.updateProjectionMatrix();
     }
   }
@@ -467,9 +478,9 @@ export class Game {
       cloud.position.x += dt * 1.4;
       if (cloud.position.x > 480) cloud.position.x = -480;
     }
-    for (const col of this.thermalColumns) {
-      col.rotation.y += dt * 0.15;
-    }
+    this.thermals.update(dt, this.elapsed, this.started && !this.paused ? this.liftName : null);
+    const air = this.player.gliding ? this.player.airSpeed : 0;
+    this.speedLines.update(dt, air, this.player.vel.y, this.player.gliding && this.started && !this.paused);
   }
 
   private renderFrame() {
@@ -540,6 +551,9 @@ export class Game {
         place: placeName(this.player.pos.x, this.player.pos.y, this.player.pos.z),
         alt: this.player.pos.y,
         gliding: this.player.gliding,
+        airSpeed: this.player.airSpeed,
+        fov: this.camera.fov,
+        lift: this.inLift,
       }),
       setPos: (x, y, z) => {
         this.player.pos.set(x, y, z);

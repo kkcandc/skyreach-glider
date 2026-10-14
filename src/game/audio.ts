@@ -3,6 +3,7 @@ export class AudioBus {
   private master: GainNode | null = null;
   private windGain: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
+  private noise: AudioBuffer | null = null;
 
   unlock() {
     if (this.ctx) {
@@ -22,6 +23,7 @@ export class AudioBus {
     const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    this.noise = buffer;
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
@@ -59,5 +61,29 @@ export class AudioBus {
 
   chord(freqs: number[]) {
     freqs.forEach((f, i) => this.tone(f, 0.35, 'triangle', 0.05 - i * 0.01));
+  }
+
+  /** Soft whoosh plus a quiet rising interval when the wing catches lift. */
+  lift() {
+    if (!this.ctx || !this.master || !this.noise) return;
+    const t = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 0.7;
+    filter.frequency.setValueAtTime(190, t);
+    filter.frequency.exponentialRampToValueAtTime(680, t + 0.4);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.07);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.48);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.master);
+    src.start(t);
+    src.stop(t + 0.5);
+    this.tone(349.2, 0.34, 'sine', 0.028);
+    this.tone(523.3, 0.42, 'sine', 0.018);
   }
 }

@@ -9,6 +9,7 @@
       name="description"
       content="Walk the roofs of Halcyon Reach, then hang-glide the thermals over an original waterfront city."
     />
+    <meta name="build" content="glide-feel-pending" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,6 +20,7 @@
   </head>
   <body>
     <canvas id="view"></canvas>
+    <canvas id="streaks" aria-hidden="true"></canvas>
     <div id="boot">Charting Halcyon Reach…</div>
 
     <section id="title" class="screen">
@@ -45,7 +47,13 @@
     <div id="hud" hidden>
       <div id="place"></div>
       <div id="rose" aria-hidden="true"><div id="compass"><b>N</b><i>E</i><b>S</b><i>W</i></div></div>
-      <div id="meters"></div>
+      <div id="readout">
+        <div id="vario" hidden>
+          <div id="vario-track"><i id="vario-needle"></i></div>
+          <em id="vario-tag">Lift</em>
+        </div>
+        <div id="meters"></div>
+      </div>
       <canvas id="map" width="180" height="180"></canvas>
       <div id="count"></div>
       <div id="trial"></div>

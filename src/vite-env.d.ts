@@ -19,6 +19,9 @@ interface SkyDebugState {
   place: string;
   alt: number;
   gliding: boolean;
+  airSpeed?: number;
+  fov?: number;
+  lift?: boolean;
 }
 
 interface SkyDebugApi {
