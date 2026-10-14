@@ -1,6 +1,6 @@
 import { Game } from './game/Game';
 
-const BUILD = 'glide-feel-pending';
+const BUILD = 'glide-feel-d325fe8';
 console.info(`[SKYREACH] build ${BUILD}`);
 
 const canvas = document.getElementById('view') as HTMLCanvasElement;
